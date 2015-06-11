@@ -1,0 +1,22 @@
+#version 120
+
+uniform mat4 u_mvpmat;
+//uniform mat4 u_modelview;
+uniform mat4 u_shadow_matrix;
+
+attribute vec3 a_pos;
+attribute vec3 a_normal;
+
+varying vec3 pos;
+varying vec3 nrm;
+varying float depth;
+varying vec4 shadow_coord;
+
+void main(void)
+{
+	pos = a_pos;
+	shadow_coord = u_shadow_matrix * vec4(a_pos,1.0);
+	gl_Position = u_mvpmat * vec4(a_pos,1.0);
+	depth = gl_Position.w;
+	nrm = a_normal;//(u_modelview * vec4(a_normal,1.0)).xyz;
+}

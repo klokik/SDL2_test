@@ -1,0 +1,18 @@
+#version 330
+
+in vec4 pos;
+in vec3 nrm;
+in float depth;
+
+out vec4 color;
+
+uniform mat4 u_modelview;
+uniform vec3 u_light_pos;
+uniform vec3 u_cam_pos;
+
+void main(void)
+{
+	vec3 L = (u_modelview * vec4(-u_light_pos,1.0)).xyz - pos.xyz;
+	float light = dot(normalize(nrm),normalize(L))/(length(L)*0.5);
+	color = vec4(vec3(light),1);
+}

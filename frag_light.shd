@@ -1,0 +1,9 @@
+#version 120
+
+varying vec4 pos;
+
+void main(void)
+{
+	gl_FragData[0] = vec4(vec3(pos.z)/100,1.0);
+	//gl_FragColor = vec4(pos.xyz,1.0);
+}

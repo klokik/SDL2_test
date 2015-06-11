@@ -1,0 +1,11 @@
+*.mkv
+
+CMakeCache.txt
+Makefile
+cmake*
+CMakeFiles/
+
+geometry
+sdl2t
+video_ffmpeg
+

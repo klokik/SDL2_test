@@ -1,0 +1,22 @@
+#version 120
+
+uniform sampler2DShadow u_shadow_map;
+uniform sampler2D u_color_map;
+
+uniform mat4 u_mvpmat;
+//uniform mat4 u_lmvpmat;
+uniform vec3 u_light_pos;
+uniform vec3 u_cam_pos;
+
+varying vec3 pos;
+varying vec3 nrm;
+varying float depth;
+varying vec4 shadow_coord;
+
+void main(void)
+{
+	float f = shadow2DProj(u_shadow_map,shadow_coord).r;
+	vec3 L = pos - u_light_pos;
+	float light = /*dot(normalize(nrm),normalize(L)) */ f;
+	gl_FragColor = vec4(vec3(light)*normalize(abs(nrm)),1);
+}

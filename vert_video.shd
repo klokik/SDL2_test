@@ -1,0 +1,26 @@
+#version 120
+
+uniform mat4 u_mvpmat;
+//uniform mat4 u_modelview;
+// uniform mat4 u_shadow_matrix;
+uniform sampler2D u_color_map;
+
+attribute vec3 a_pos;
+attribute vec3 a_normal;
+attribute vec3 a_video_coord;
+
+varying vec3 pos;
+varying vec3 nrm;
+// varying float depth;
+varying vec2 video_coord;
+
+void main(void)
+{
+	pos = a_pos;
+	// shadow_coord = u_shadow_matrix * vec4(a_pos,1.0);
+	float offset = texture2D(u_color_map,video_coord).r*0.1;
+	gl_Position = u_mvpmat * vec4(a_pos+vec3(0,offset,0),1.0);
+	// depth = gl_Position.w;
+	nrm = a_normal;//(u_modelview * vec4(a_normal,1.0)).xyz;
+	video_coord = a_video_coord.xy;
+}

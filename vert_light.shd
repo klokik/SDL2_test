@@ -1,0 +1,13 @@
+#version 120
+
+uniform mat4 ul_lmvpmat;
+
+attribute vec3 al_pos;
+
+varying vec4 pos;
+
+void main(void)
+{
+	pos = ul_lmvpmat * vec4(al_pos,1.0);
+	gl_Position = ul_lmvpmat * vec4(al_pos,1.0);
+}
