@@ -149,6 +149,12 @@ int main(int argc, char **argv)
 		if(state[SDL_SCANCODE_K])
 			t+=0.5f;
 
+		if(state[SDL_SCANCODE_W])
+			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+
+		if(state[SDL_SCANCODE_F])
+			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
 		draw(mainwindow);
 	}
 
@@ -173,7 +179,7 @@ void init(void)
 {
 	print_opengl_info(stdout);
 
-	glClearColor(0.0f,0.1f,0.2f,1.0f);
+	glClearColor(0.5f,0.5f,0.5f,1.0f);
 	glEnable(GL_DEPTH_TEST);
 	// glDepthFunc(GL_LEQUAL);
 	// glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);	
@@ -294,13 +300,14 @@ bool checkCompileStatus(uint shaderid)
 	return true;
 }
 
-uint loadProgram(string vfile,string ffile)
+uint loadProgram(string vfile,string ffile,string gfile)
 {
 	string vert = readFile(vfile.c_str());
 	string frag = readFile(ffile.c_str());
 
 	GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
+	GLuint gshader = 0;
 
 	const char *vbuf = vert.c_str();
 	const char *fbuf = frag.c_str();
@@ -311,6 +318,19 @@ uint loadProgram(string vfile,string ffile)
 	glCompileShader(vshader);
 	glCompileShader(fshader);
 
+	if(gfile != "")
+	{
+		string geom = readFile(gfile.c_str());
+		gshader = glCreateShader(GL_GEOMETRY_SHADER);
+
+		const char *gbuf = geom.c_str();
+		glShaderSource(gshader,1,&gbuf,NULL);
+
+		glCompileShader(gshader);
+		if(!checkCompileStatus(vshader))
+			throw runtime_error("invalid geometry shader");		
+	}
+
 	if((!checkCompileStatus(vshader)) || (!checkCompileStatus(fshader)))
 		throw runtime_error("invalid shader source");
 
@@ -319,10 +339,14 @@ uint loadProgram(string vfile,string ffile)
 	glAttachShader(r_prog,vshader);
 	glAttachShader(r_prog,fshader);
 
+	if(gfile != "") glAttachShader(r_prog,gshader);
+
 	glLinkProgram(r_prog);
 
 	glDeleteShader(vshader);
 	glDeleteShader(fshader);
+	if(gfile != "")
+		glDeleteShader(gshader);	
 
 	return r_prog;
 }
@@ -332,7 +356,7 @@ void initPrograms(void)
 	//light
 	// rlight_prog = loadProgram("vert_light.shd","frag_light.shd");
 	// final
-	rshadow_prog = loadProgram("vert_33.shd","frag_33.shd");
+	rshadow_prog = loadProgram("vert_33.shd","frag_33.shd","geom_33.shd");
 
 	// al_pos = glGetAttribLocation(rlight_prog,"al_pos");
 	// ul_lmvpmat = glGetUniformLocation(rlight_prog,"ul_lmvpmat");
