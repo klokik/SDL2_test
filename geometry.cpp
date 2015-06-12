@@ -138,6 +138,8 @@ int main(int argc, char **argv)
 
 	const Uint8 *state = SDL_GetKeyboardState(NULL);
 
+	bool toggle = false;
+
 	while(1)
 	{
 		SDL_PumpEvents();
@@ -149,9 +151,13 @@ int main(int argc, char **argv)
 		if(state[SDL_SCANCODE_K])
 			t+=0.5f;
 
+		if(toggle = !toggle)
+			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
 		if(state[SDL_SCANCODE_W])
 			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-
 		if(state[SDL_SCANCODE_F])
 			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
@@ -289,7 +295,7 @@ bool checkCompileStatus(uint shaderid)
 	glGetShaderiv(shaderid,GL_COMPILE_STATUS,&result);
 	if(result!=GL_TRUE)
 	{
-		cout<<"vertex FAIL"<<endl;
+		cout<<"shader FAIL"<<endl;
 		char log[2048];
 		int len;
 		glGetShaderInfoLog(shaderid,2048,&len,log);
@@ -327,7 +333,7 @@ uint loadProgram(string vfile,string ffile,string gfile)
 		glShaderSource(gshader,1,&gbuf,NULL);
 
 		glCompileShader(gshader);
-		if(!checkCompileStatus(vshader))
+		if(!checkCompileStatus(gshader))
 			throw runtime_error("invalid geometry shader");		
 	}
 

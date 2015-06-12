@@ -3,18 +3,18 @@
 in vec3 a_pos;
 in vec3 a_normal;
 
-out vec4 pos;
-out vec3 nrm;
-out float depth;
+out vec4 _pos;
+out vec3 _nrm;
+out float _depth;
 
 uniform mat4 u_modelview;
 uniform mat4 u_projection;
 
 void main(void)
 {
-	pos = u_modelview * vec4(a_pos,1.0);
-	nrm = (u_modelview * vec4(a_normal,1.0)).xyz;
+	_pos = u_modelview * vec4(a_pos,1.0);
+	_nrm = (u_modelview * vec4(a_normal,1.0)).xyz;
 
-	gl_Position = u_projection * pos;
-	depth = gl_Position.w;
+	gl_Position = u_projection * _pos;
+	_depth = gl_Position.w;
 }

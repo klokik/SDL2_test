@@ -1,18 +1,65 @@
 #version 330 core
 
-layout (triangles) in
-layout (triangle_strip, max_vertices = 3) out;
+layout (triangles) in;
+layout (triangle_strip, max_vertices = 9) out;
 
-int main()
+in vec4 _pos[];
+in vec3 _nrm[];
+in float _depth[];
+
+out vec4 pos;
+out vec3 nrm;
+out float depth;
+
+void main()
 {
 	int n;
 
+	vec4 c_pos = vec4(0);
 	for(n=0;n<gl_in.length();n++)
-	{
-		gl_Position = gl_in[n].gl_Position;
+		c_pos += gl_in[n].gl_Position;
 
+	c_pos = c_pos/3;
+
+	for(n=0;n<gl_in.length()-1;n++)
+	{
+		gl_Position = c_pos;
+		pos = c_pos;
+		nrm = _nrm[0];
+		depth = c_pos.w;
 		EmitVertex();
+
+		gl_Position = gl_in[n].gl_Position;
+		pos = gl_Position;
+		nrm = _nrm[n];
+		depth = _pos[n].w;
+		EmitVertex();
+		gl_Position = gl_in[n+1].gl_Position;
+		pos = gl_Position;
+		nrm = _nrm[n+1];
+		depth = _pos[n+1].w;
+		EmitVertex();
+
+		EndPrimitive();
 	}
+
+	gl_Position = c_pos;
+	pos = c_pos;
+	nrm = _nrm[0];
+	depth = c_pos.w;
+	EmitVertex();
+
+	gl_Position = gl_in[0].gl_Position;
+	pos = gl_Position;
+	nrm = _nrm[0];
+	depth = _pos[0].w;
+	EmitVertex();
+
+	gl_Position = gl_in[gl_in.length()-1].gl_Position;
+	pos = gl_Position;
+	nrm = _nrm[gl_in.length()-1];
+	depth = _pos[gl_in.length()-1].w;
+	EmitVertex();
 
 	EndPrimitive();
 }
