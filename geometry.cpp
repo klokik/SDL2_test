@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 	if(SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		die("Unable to initialize video");
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
@@ -151,10 +151,11 @@ int main(int argc, char **argv)
 		if(state[SDL_SCANCODE_K])
 			t+=0.5f;
 
-		if(toggle = !toggle)
-			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-		else
-			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+		if(false)
+			if(toggle = !toggle)
+				glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+			else
+				glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
 		if(state[SDL_SCANCODE_W])
 			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
@@ -281,7 +282,7 @@ void draw(SDL_Window *window)
 	glEnableVertexAttribArray(a_pos);
 	glEnableVertexAttribArray(a_normal);
 
-	glDrawElements(GL_TRIANGLES,3*mesh.fcecount,GL_UNSIGNED_INT,0);
+	glDrawElements(GL_PATCHES,3*mesh.fcecount,GL_UNSIGNED_INT,0);
 
 	glDisableVertexAttribArray(a_pos);
 	glDisableVertexAttribArray(a_normal);
@@ -306,7 +307,7 @@ bool checkCompileStatus(uint shaderid)
 	return true;
 }
 
-uint loadProgram(string vfile,string ffile,string gfile)
+uint loadProgram(string vfile,string ffile,string gfile,string tcfile,string tefile)
 {
 	string vert = readFile(vfile.c_str());
 	string frag = readFile(ffile.c_str());
@@ -314,6 +315,8 @@ uint loadProgram(string vfile,string ffile,string gfile)
 	GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
 	GLuint gshader = 0;
+	GLuint tcshader = 0;
+	GLuint teshader = 0;
 
 	const char *vbuf = vert.c_str();
 	const char *fbuf = frag.c_str();
@@ -337,6 +340,29 @@ uint loadProgram(string vfile,string ffile,string gfile)
 			throw runtime_error("invalid geometry shader");		
 	}
 
+	if((tcfile != "") && (tefile != ""))
+	{
+		string ctrl = readFile(tcfile.c_str());
+		string eval = readFile(tefile.c_str());
+
+		tcshader = glCreateShader(GL_TESS_CONTROL_SHADER);
+		teshader = glCreateShader(GL_TESS_EVALUATION_SHADER);
+
+		const char *tcbuf = ctrl.c_str();
+		const char *tebuf = eval.c_str();
+
+		glShaderSource(tcshader,1,&tcbuf,NULL);
+		glShaderSource(teshader,1,&tebuf,NULL);
+
+		glCompileShader(tcshader);
+		glCompileShader(teshader);
+
+		if(!checkCompileStatus(tcshader) || !checkCompileStatus(teshader))
+			throw runtime_error("invalid tessellatioon shader shader");	
+
+		glPatchParameteri(GL_PATCH_VERTICES,3);
+	}
+
 	if((!checkCompileStatus(vshader)) || (!checkCompileStatus(fshader)))
 		throw runtime_error("invalid shader source");
 
@@ -347,12 +373,24 @@ uint loadProgram(string vfile,string ffile,string gfile)
 
 	if(gfile != "") glAttachShader(r_prog,gshader);
 
+	if(tcshader)
+	{
+		glAttachShader(r_prog,tcshader);
+		glAttachShader(r_prog,teshader);
+	}
+
 	glLinkProgram(r_prog);
 
 	glDeleteShader(vshader);
 	glDeleteShader(fshader);
 	if(gfile != "")
 		glDeleteShader(gshader);	
+
+	if(tcshader)
+	{
+		glDeleteProgram(tcshader);
+		glDeleteProgram(teshader);
+	}
 
 	return r_prog;
 }
@@ -362,7 +400,7 @@ void initPrograms(void)
 	//light
 	// rlight_prog = loadProgram("vert_light.shd","frag_light.shd");
 	// final
-	rshadow_prog = loadProgram("vert_33.shd","frag_33.shd","geom_33.shd");
+	rshadow_prog = loadProgram("vert_33.shd","frag_33.shd","","tessctrl_43.shd","tesseval_43.shd");
 
 	// al_pos = glGetAttribLocation(rlight_prog,"al_pos");
 	// ul_lmvpmat = glGetUniformLocation(rlight_prog,"ul_lmvpmat");
