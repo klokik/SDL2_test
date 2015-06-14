@@ -8,16 +8,50 @@ in vec3 _nrm[];
 out vec4 pos;
 out vec3 nrm;
 
+uniform mat4 u_projection;
+uniform mat4 u_modelview;
+uniform float u_fov;
+
+float p_func(float f,float theta)
+{
+	return f*theta;
+}
+
+vec4 setProjection(vec3 pos, float angle)
+{
+	float nz = 0.1;
+	float fz = 120.0;
+	float fov = radians(angle);
+
+	vec4 npos = vec4(1);
+
+	float f = 1/tan(fov/2.0);
+
+	float theta = atan(sqrt(dot(pos.xy,pos.xy)),-pos.z);
+
+	float r = p_func(f,theta);
+
+	npos.x = r*(pos.x/sqrt(dot(pos.xy,pos.xy)));	// r*cos(phi)
+	npos.y = r*(pos.y/sqrt(dot(pos.xy,pos.xy)));	// r*sin(phi)
+	npos.z = ((-pos.z-nz)*2.0/(fz-nz)-1.0);
+	npos.w = 1;
+
+	return npos;
+}
+
 void main()
 {
 	float u = gl_TessCoord.x;
 	float v = gl_TessCoord.y;
 	float w = gl_TessCoord.z;
 
-	gl_Position =
+	vec4 position =
 		gl_in[0].gl_Position*u + 
 		gl_in[1].gl_Position*v +
 		gl_in[2].gl_Position*w;
+
+	// gl_Position = u_projection*position;
+	gl_Position = setProjection(position.xyz,u_fov*2);
 
 	pos = _pos[0]*u+_pos[1]*v+_pos[2]*w;
 	nrm = _nrm[0]*u+_nrm[1]*v+_nrm[2]*w;

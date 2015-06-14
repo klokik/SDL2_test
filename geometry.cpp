@@ -39,6 +39,7 @@ GLint u_shadow_map;
 GLint u_color_map;
 GLint u_light_pos;
 GLint u_cam_pos;
+GLint u_fov;
 
 
 GLuint rlight_prog;
@@ -52,7 +53,11 @@ AEMatrix4f4 light_prj;
 
 AEMatrix4f4 shadow_matrix;
 
-static float t = 0;
+float t = 0;
+float fov_val = 60;
+
+Vec3f cpos = vec3f(0,0,5);
+Vec3f cang = vec3f(0,0,0);
 
 
 void draw(SDL_Window *window);
@@ -151,13 +156,30 @@ int main(int argc, char **argv)
 		if(state[SDL_SCANCODE_K])
 			t+=0.5f;
 
+		if(state[SDL_SCANCODE_W])	cpos.Z -= 0.1f;
+		if(state[SDL_SCANCODE_S])	cpos.Z += 0.1f;
+		if(state[SDL_SCANCODE_A])	cpos.X -= 0.1f;
+		if(state[SDL_SCANCODE_D])	cpos.X += 0.1f;
+
+		if(state[SDL_SCANCODE_UP])		cang.X += 0.5f;
+		if(state[SDL_SCANCODE_DOWN])	cang.X -= 0.5f;
+		if(state[SDL_SCANCODE_LEFT])	cang.Y += 0.5f;
+		if(state[SDL_SCANCODE_RIGHT])	cang.Y -= 0.5f;
+
+		if(state[SDL_SCANCODE_SPACE])	cpos.Y += 0.1f;
+		if(state[SDL_SCANCODE_LSHIFT])	cpos.Y -= 0.1f;
+
+		if(state[SDL_SCANCODE_O])	fov_val -= 0.5f;
+		if(state[SDL_SCANCODE_P])	fov_val += 0.5f;
+
+
 		if(false)
 			if(toggle = !toggle)
 				glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 			else
 				glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
-		if(state[SDL_SCANCODE_W])
+		if(state[SDL_SCANCODE_R])
 			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 		if(state[SDL_SCANCODE_F])
 			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
@@ -220,7 +242,7 @@ void deinit(void)
 void setView(void)
 {
 	t+=0.5f;
-	cam_mv = AEMatrix4f4().RotateX(30).Translate(vec3f(0,-5,-6)).RotateY(t);
+	cam_mv = AEMatrix4f4().Translate(cpos).RotateY(cang.Y).RotateX(cang.X).Invert();//AEMatrix4f4().RotateX(30).Translate(vec3f(0,-5,-6)).RotateY(t);
 	light_mv = AEMatrix4f4().RotateX(60).RotateY(180).Translate(vec3f(0,5,6)).RotateY(-t*0.7);
 
 	float biasf[] = {
@@ -270,6 +292,8 @@ void draw(SDL_Window *window)
 
 	glUniform3f(u_light_pos,light_mv[12],light_mv[13],light_mv[14]);
 	glUniform3f(u_cam_pos,cam_mv[12],cam_mv[13],cam_mv[14]);
+
+	glUniform1f(u_fov,fov_val);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh.idfce);
 
@@ -415,6 +439,7 @@ void initPrograms(void)
 	u_color_map = glGetUniformLocation(rshadow_prog,"u_color_map");
 	u_light_pos = glGetUniformLocation(rshadow_prog,"u_light_pos");
 	u_cam_pos = glGetUniformLocation(rshadow_prog,"u_cam_pos");
+	u_fov = glGetUniformLocation(rshadow_prog,"u_fov");
 }
 
 void initFbos(void)
@@ -496,7 +521,7 @@ void checkFBO(GLenum fb)
 
 void initGeometry(void)
 {
-	LoadObjFile(mesh,"test.obj");
+	LoadObjFile(mesh,"test2.obj");
 
 	glGenBuffers(1,&mesh.idvtx);
 	glGenBuffers(1,&mesh.idfce);

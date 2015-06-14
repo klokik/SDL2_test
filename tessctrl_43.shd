@@ -8,6 +8,9 @@ in vec3 nrm[];
 out vec4 _pos[];
 out vec3 _nrm[];
 
+uniform float u_fov;
+uniform mat4 u_projection;
+
 void main()
 {
 	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -15,9 +18,16 @@ void main()
 	_pos[gl_InvocationID] = pos[gl_InvocationID];
 	_nrm[gl_InvocationID] = nrm[gl_InvocationID];
 
-	gl_TessLevelOuter[0] = 10.0;
-	gl_TessLevelOuter[1] = 10.0;
-	gl_TessLevelOuter[2] = 10.0;
 
-	gl_TessLevelInner[0] = 10.0;
+	float value = distance(gl_in[gl_InvocationID].gl_Position,gl_in[(gl_InvocationID+1)%gl_PatchVerticesIn].gl_Position);
+	vec4 center = (gl_in[gl_InvocationID].gl_Position+gl_in[(gl_InvocationID+1)%gl_PatchVerticesIn].gl_Position)/2;
+
+	value /= distance(vec4(0,0,0,1),center);
+
+	float amount = value * 8;
+
+	gl_TessLevelOuter[gl_InvocationID] = amount;
+
+	if(gl_InvocationID == 0)
+		gl_TessLevelInner[0] = amount;
 }
