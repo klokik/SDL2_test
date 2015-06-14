@@ -17,24 +17,59 @@ float p_func(float f,float theta)
 	return f*theta;
 }
 
-vec4 setProjection(vec3 pos, float angle)
+// vec4 setProjection(vec3 pos, float angle)
+// {
+// 	float nz = 0.1;
+// 	float fz = 120.0;
+// 	float fov = radians(angle);
+
+// 	vec4 npos = vec4(1);
+
+// 	float f = 1/tan(fov/2.0);
+
+// 	float theta = atan(sqrt(dot(pos.xy,pos.xy)),-pos.z);
+
+// 	float r = p_func(f,theta);
+
+// 	npos.x = r*(pos.x/sqrt(dot(pos.xy,pos.xy)));	// r*cos(phi)
+// 	npos.y = r*(pos.y/sqrt(dot(pos.xy,pos.xy)));	// r*sin(phi)
+// 	npos.z = ((-pos.z-nz)*2.0/(fz-nz)-1.0);
+// 	npos.w = 1;
+
+// 	return npos;
+// }
+
+vec2 Ln(float x,float y)
 {
-	float nz = 0.1;
-	float fz = 120.0;
-	float fov = radians(angle);
+	return vec2(log(sqrt(x*x+y*y)),atan(y,x));
+}
+
+vec4 setProjection(vec3 pos,vec2 angle)
+{
+		float z_near = 0.1;
+	float z_far = 100;
+
+	float vangle = radians(60);
+	float hangle = radians(60);
 
 	vec4 npos = vec4(1);
 
-	float f = 1/tan(fov/2.0);
+	npos.zx = Ln(-pos.z,-pos.x);
+	npos.y  = Ln(-pos.z, pos.y).y;
 
-	float theta = atan(sqrt(dot(pos.xy,pos.xy)),-pos.z);
+	vec4 apos = u_projection*vec4(pos,1.0);
 
-	float r = p_func(f,theta);
+	// npos.x = apos.x/apos.w;
+	// npos.y = apos.y/apos.w;
+	// npos.z = apos.z/apos.w;
+	// npos.zy = Ln(-pos.z, pos.y).;
 
-	npos.x = r*(pos.x/sqrt(dot(pos.xy,pos.xy)));	// r*cos(phi)
-	npos.y = r*(pos.y/sqrt(dot(pos.xy,pos.xy)));	// r*sin(phi)
-	npos.z = ((-pos.z-nz)*2.0/(fz-nz)-1.0);
-	npos.w = 1;
+	npos.z = (npos.z-log(z_near))*2/(log(z_far)-log(z_near))-1;
+
+	npos.x /= 3.1415;
+	npos.y /= 3.1415;
+
+	npos.w = 1.0;//*u_fov/90;
 
 	return npos;
 }
@@ -50,8 +85,10 @@ void main()
 		gl_in[1].gl_Position*v +
 		gl_in[2].gl_Position*w;
 
+
 	// gl_Position = u_projection*position;
-	gl_Position = setProjection(position.xyz,u_fov*2);
+	// gl_Position = setProjection(position.xyz,u_fov*2);
+	gl_Position = setProjection(position.xyz,vec2(60,60));
 
 	pos = _pos[0]*u+_pos[1]*v+_pos[2]*w;
 	nrm = _nrm[0]*u+_nrm[1]*v+_nrm[2]*w;
