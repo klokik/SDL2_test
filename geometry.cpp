@@ -56,8 +56,11 @@ AEMatrix4f4 shadow_matrix;
 float t = 0;
 float fov_val = 60;
 
-Vec3f cpos = vec3f(0,5,6);
-Vec3f cang = vec3f(-30,0,0);
+// Vec3f cpos = vec3f(0,5,6);
+// Vec3f cang = vec3f(-30,0,0);
+
+Vec3f cpos = vec3f(0,5,0);
+Vec3f cang = vec3f(0,90,0);
 
 
 void draw(SDL_Window *window);
@@ -521,7 +524,7 @@ void checkFBO(GLenum fb)
 
 void initGeometry(void)
 {
-	LoadObjFile(mesh,"test.obj");
+	LoadObjFile(mesh,"test2.obj");
 
 	glGenBuffers(1,&mesh.idvtx);
 	glGenBuffers(1,&mesh.idfce);

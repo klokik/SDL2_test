@@ -54,8 +54,14 @@ vec4 setProjection(vec3 pos,vec2 angle)
 
 	vec4 npos = vec4(1);
 
-	npos.zx = Ln(-pos.z,-pos.x);
-	npos.y  = Ln(-pos.z, pos.y).y;
+	// npos.zx = Ln(-pos.z,-pos.x);
+	// npos.y  = Ln(-pos.z, pos.y).y;
+
+	vec2 pp = Ln(-pos.z,sqrt(dot(pos.xy,pos.xy)));
+
+	npos.z = pp.x;
+	npos.x = pp.y*(pos.x/sqrt(dot(pos.xy,pos.xy)));
+	npos.y = pp.y*(pos.y/sqrt(dot(pos.xy,pos.xy)));
 
 	vec4 apos = u_projection*vec4(pos,1.0);
 
