@@ -13,7 +13,7 @@ varying vec3 nrm;
 void main(void)
 {
 	vec3 L = (u_modelview*vec4(u_light_pos,1)-pos).xyz;
-	float light = dot(normalize(nrm),normalize(L));
+	float light = dot(normalize(nrm),normalize(L))/(length(L)*0.2);
 
 	gl_FragData[0] = vec4(vec3(light),1);
 }

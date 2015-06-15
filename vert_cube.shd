@@ -14,7 +14,7 @@ varying vec3 nrm;
 void main(void)
 {
 	pos  = u_modelview  * vec4(a_pos,1.0);
-	nrm = (u_modelview * vec4(a_normal,1.0)).xyz;
+	nrm = mat3(u_modelview)*a_normal;
 
 	gl_Position = u_projection * pos;
 }
