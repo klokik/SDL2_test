@@ -11,8 +11,8 @@ target_link_libraries(sdl2t SDL2 GL)
 #add_executable(video_ffmpeg video.cpp AEMatrix4f4.cpp AEMatrix3f3.cpp AEVectorMath.cpp AEMesh.cpp objImport.cpp)
 #target_link_libraries(video_ffmpeg SDL2 GL avcodec avutil avformat swscale)
 
-add_executable(geometry geometry.cpp AEMatrix4f4.cpp AEMatrix3f3.cpp AEVectorMath.cpp AEMesh.cpp objImport.cpp)
-target_link_libraries(geometry SDL2 GL)
+#add_executable(geometry geometry.cpp AEMatrix4f4.cpp AEMatrix3f3.cpp AEVectorMath.cpp AEMesh.cpp objImport.cpp)
+#target_link_libraries(geometry SDL2 GL)
 
 add_executable(cubemap cubemap.cpp AEMatrix4f4.cpp AEMatrix3f3.cpp AEVectorMath.cpp AEMesh.cpp objImport.cpp)
 target_link_libraries(cubemap SDL2 GL)
