@@ -1,0 +1,19 @@
+#version 120
+
+uniform mat4 u_modelview;
+uniform mat4 u_projection;
+
+uniform vec3 u_light_pos;
+uniform vec3 u_cam_pos;
+
+varying vec4 pos;
+
+varying vec3 nrm;
+
+void main(void)
+{
+	vec3 L = (u_modelview*vec4(u_light_pos,1)-pos).xyz;
+	float light = dot(normalize(nrm),normalize(L));
+
+	gl_FragData[0] = vec4(vec3(light),1);
+}

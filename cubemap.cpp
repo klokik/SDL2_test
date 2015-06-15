@@ -21,7 +21,7 @@ using namespace aengine;
 int depth_tex_size = 256;
 GLuint light_depth_tex;
 GLuint light_fbo;
-GLuint light_color_tex;
+GLuint light_color_tex[6];
 
 //GLuint square[4];
 AEMesh mesh;
@@ -56,7 +56,7 @@ AEMatrix4f4 shadow_matrix;
 float t = 0;
 float fov_val = 60;
 
-Vec3f cpos = vec3f(0,0,5);
+Vec3f cpos = vec3f(0,5,0);
 Vec3f cang = vec3f(0,0,0);
 
 
@@ -121,14 +121,14 @@ int main(int argc, char **argv)
 	if(SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		die("Unable to initialize video");
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-	mainwindow = SDL_CreateWindow("SDL2 application",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,640,640,SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
+	mainwindow = SDL_CreateWindow("SDL2 application",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,depth_tex_size*3,depth_tex_size*2,SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
 	if(!mainwindow)
 		die("Unable to create window!");
 
@@ -219,14 +219,14 @@ void init(void)
 	// glEnable(GL_TEXTURE_2D);
 
 	initPrograms();
-	// initFbos();
+	initFbos();
 	initGeometry();
 }
 
 void deinit(void)
 {
 	glDeleteTextures(1,&light_depth_tex);
-	glDeleteTextures(1,&light_color_tex);
+	glDeleteTextures(6,&light_color_tex[0]);
 
 	glDeleteFramebuffers(1,&light_fbo);
 
@@ -280,9 +280,9 @@ void draw(SDL_Window *window)
 
 	// GLenum copy_buf[] = {GL_BACK_LEFT};
 	// glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-	glViewport(0,0,640,640);
+	// glViewport(0,0,640,640);
 	// glDrawBuffers(1,copy_buf);
-	glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+	// glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 
 	glUseProgram(rshadow_prog);
 
@@ -306,10 +306,50 @@ void draw(SDL_Window *window)
 	glEnableVertexAttribArray(a_pos);
 	glEnableVertexAttribArray(a_normal);
 
-	glDrawElements(GL_PATCHES,3*mesh.fcecount,GL_UNSIGNED_INT,0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,light_fbo);
+
+	AEMatrix4f4 proj[] = 
+	{
+		AEMatrix4f4().Translate(cpos).RotateY(cang.Y).RotateX(cang.X).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateY(cang.Y+90).RotateX(cang.X).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateY(cang.Y-90).RotateX(cang.X).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateY(cang.Y+180).RotateX(cang.X).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateY(cang.Y).RotateX(cang.X+90).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateY(cang.Y).RotateX(cang.X-90).Invert()
+	};
+
+	for(uint q=0;q<6;q++)
+	{
+		GLenum draw_buf[]={GL_COLOR_ATTACHMENT0+q};
+		glDrawBuffers(1,draw_buf);
+
+		glViewport(0,0,depth_tex_size,depth_tex_size);
+		glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+		glUniformMatrix4fv(u_modelview,1,GL_FALSE,proj[q].ToArray());
+
+		glDrawElements(GL_TRIANGLES,3*mesh.fcecount,GL_UNSIGNED_INT,0);
+	}
 
 	glDisableVertexAttribArray(a_pos);
 	glDisableVertexAttribArray(a_normal);
+
+
+	// blit
+	GLenum copy_buf[] = {GL_BACK_LEFT};
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+	glViewport(0,0,depth_tex_size*3,depth_tex_size*2);
+	glDrawBuffers(1,copy_buf);
+	glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER,light_fbo);
+
+	for(uint q=0;q<6;q++)
+	{
+		glReadBuffer(GL_COLOR_ATTACHMENT0+q);
+		glBlitFramebuffer(0,0,depth_tex_size,depth_tex_size,
+			depth_tex_size*(q%3),depth_tex_size*(q/3),
+			depth_tex_size*(q%3+1),depth_tex_size*(q/3+1),GL_COLOR_BUFFER_BIT,GL_NEAREST);
+	}
 
 	SDL_GL_SwapWindow(window);
 }
@@ -384,7 +424,7 @@ uint loadProgram(string vfile,string ffile,string gfile,string tcfile,string tef
 		if(!checkCompileStatus(tcshader) || !checkCompileStatus(teshader))
 			throw runtime_error("invalid tessellatioon shader shader");	
 
-		glPatchParameteri(GL_PATCH_VERTICES,3);
+		// glPatchParameteri(GL_PATCH_VERTICES,3);
 	}
 
 	if((!checkCompileStatus(vshader)) || (!checkCompileStatus(fshader)))
@@ -395,7 +435,8 @@ uint loadProgram(string vfile,string ffile,string gfile,string tcfile,string tef
 	glAttachShader(r_prog,vshader);
 	glAttachShader(r_prog,fshader);
 
-	if(gfile != "") glAttachShader(r_prog,gshader);
+	if(gshader)
+		glAttachShader(r_prog,gshader);
 
 	if(tcshader)
 	{
@@ -407,7 +448,7 @@ uint loadProgram(string vfile,string ffile,string gfile,string tcfile,string tef
 
 	glDeleteShader(vshader);
 	glDeleteShader(fshader);
-	if(gfile != "")
+	if(gshader)
 		glDeleteShader(gshader);	
 
 	if(tcshader)
@@ -424,7 +465,7 @@ void initPrograms(void)
 	//light
 	// rlight_prog = loadProgram("vert_light.shd","frag_light.shd");
 	// final
-	rshadow_prog = loadProgram("vert_33.shd","frag_33.shd","","tessctrl_43.shd","tesseval_43.shd");
+	rshadow_prog = loadProgram("vert_cube.shd","frag_cube.shd","","","");
 
 	// al_pos = glGetAttribLocation(rlight_prog,"al_pos");
 	// ul_lmvpmat = glGetUniformLocation(rlight_prog,"ul_lmvpmat");
@@ -442,6 +483,19 @@ void initPrograms(void)
 	u_fov = glGetUniformLocation(rshadow_prog,"u_fov");
 }
 
+GLuint createColorTex()
+{
+	GLuint tex;
+	glGenTextures(1,&tex);
+	glBindTexture(GL_TEXTURE_2D,tex);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,depth_tex_size,depth_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+
+	return tex;
+}
 void initFbos(void)
 {
 	// depth texture
@@ -456,14 +510,9 @@ void initFbos(void)
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 
-	// color texture
-	glGenTextures(1,&light_color_tex);
-	glBindTexture(GL_TEXTURE_2D,light_color_tex);
-	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,depth_tex_size,depth_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+	// color textures
+	for(uint q=0;q<6;q++)
+		light_color_tex[q] = createColorTex();
 
 	glBindTexture(GL_TEXTURE_2D,0);
 
@@ -471,7 +520,8 @@ void initFbos(void)
 	glGenFramebuffers(1,&light_fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER,light_fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_TEXTURE_2D,light_depth_tex,0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,light_color_tex,0);
+	for(uint q=0;q<6;q++)
+		glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0+q,GL_TEXTURE_2D,light_color_tex[q],0);
 	// GLenum draw_buf[]={GL_COLOR_ATTACHMENT0};
 	// glDrawBuffers(1,draw_buf);
 	//glDrawBuffer(GL_NONE);
