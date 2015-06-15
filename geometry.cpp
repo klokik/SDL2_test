@@ -56,8 +56,8 @@ AEMatrix4f4 shadow_matrix;
 float t = 0;
 float fov_val = 60;
 
-Vec3f cpos = vec3f(0,0,5);
-Vec3f cang = vec3f(0,0,0);
+Vec3f cpos = vec3f(0,5,0);
+Vec3f cang = vec3f(0,90,0);
 
 
 void draw(SDL_Window *window);
