@@ -2,6 +2,8 @@
 #define GL_GLEXT_PROTOTYPES
 #endif
 
+#include <GL/glew.h>
+
 #include <SDL2/SDL.h>
 #include <GL/gl.h>
 
@@ -122,7 +124,7 @@ int main(int argc, char **argv)
 		die("Unable to initialize video");
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -138,6 +140,11 @@ int main(int argc, char **argv)
 	checkSDLError(__LINE__);
 
 	SDL_GL_SetSwapInterval(1);	// turn on Vsync
+
+	glewExperimental = true;
+	GLenum err = glewInit();
+	if(err != GLEW_OK)
+		die("glewInit failed, aborting.");
 
 	init();
 
