@@ -70,7 +70,7 @@ void initFbos(void);
 void initGeometry(void);
 void LoadObjFile(AEMesh &mesh, const char *path);
 AEMatrix4f4 getProjMtx(float fov,float z_near,float z_far);
-void checkError(void);
+void checkError(int line=-1);
 void checkFBO(GLenum fb);
 
 void die(string msg)
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -141,12 +141,16 @@ int main(int argc, char **argv)
 
 	SDL_GL_SetSwapInterval(1);	// turn on Vsync
 
+	checkError(__LINE__);
 	glewExperimental = true;
 	GLenum err = glewInit();
 	if(err != GLEW_OK)
 		die("glewInit failed, aborting.");
+	glGetError(); 	// clear error flag
+	checkError(__LINE__);
 
 	init();
+	checkError(__LINE__);
 
 	const Uint8 *state = SDL_GetKeyboardState(NULL);
 
@@ -192,6 +196,7 @@ int main(int argc, char **argv)
 			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
 		draw(mainwindow);
+		checkError(__LINE__);
 	}
 
 	deinit();
@@ -214,9 +219,11 @@ void print_opengl_info(FILE *fp)
 void init(void)
 {
 	print_opengl_info(stdout);
+	checkError(__LINE__);
 
 	glClearColor(0.5f,0.5f,0.5f,1.0f);
 	glEnable(GL_DEPTH_TEST);
+	checkError(__LINE__);
 	// glDepthFunc(GL_LEQUAL);
 	// glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);	
 
@@ -226,8 +233,10 @@ void init(void)
 	// glEnable(GL_TEXTURE_2D);
 
 	initPrograms();
+	checkError(__LINE__);
 	// initFbos();
 	initGeometry();
+	checkError(__LINE__);
 }
 
 void deinit(void)
@@ -283,6 +292,7 @@ AEMatrix4f4 getProjMtx(float fov,float z_near,float z_far)
 
 void draw(SDL_Window *window)
 {
+	checkError(__LINE__);
 	setView();
 
 	// GLenum copy_buf[] = {GL_BACK_LEFT};
@@ -290,6 +300,7 @@ void draw(SDL_Window *window)
 	glViewport(0,0,640,640);
 	// glDrawBuffers(1,copy_buf);
 	glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+	checkError(__LINE__);
 
 	glUseProgram(rshadow_prog);
 
@@ -302,21 +313,27 @@ void draw(SDL_Window *window)
 
 	glUniform1f(u_fov,fov_val);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh.idfce);
-
 	glBindBuffer(GL_ARRAY_BUFFER,mesh.idvtx);
 	glVertexAttribPointer(a_pos,3,GL_FLOAT,GL_FALSE,0,0);
 
 	glBindBuffer(GL_ARRAY_BUFFER,mesh.idnrm);
 	glVertexAttribPointer(a_normal,3,GL_FLOAT,GL_FALSE,0,0);
 
+	glBindBuffer(GL_ARRAY_BUFFER,0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh.idfce);
+
+	checkError(__LINE__);
 	glEnableVertexAttribArray(a_pos);
 	glEnableVertexAttribArray(a_normal);
+	checkError(__LINE__);
 
 	glDrawElements(GL_PATCHES,3*mesh.fcecount,GL_UNSIGNED_INT,0);
+	checkError(__LINE__);
 
 	glDisableVertexAttribArray(a_pos);
 	glDisableVertexAttribArray(a_normal);
+	checkError(__LINE__);
 
 	SDL_GL_SwapWindow(window);
 }
@@ -412,16 +429,16 @@ uint loadProgram(string vfile,string ffile,string gfile,string tcfile,string tef
 
 	glLinkProgram(r_prog);
 
-	glDeleteShader(vshader);
-	glDeleteShader(fshader);
-	if(gfile != "")
-		glDeleteShader(gshader);	
+	// glDeleteShader(vshader);
+	// glDeleteShader(fshader);
+	// if(gfile != "")
+	// 	glDeleteShader(gshader);	
 
-	if(tcshader)
-	{
-		glDeleteProgram(tcshader);
-		glDeleteProgram(teshader);
-	}
+	// if(tcshader)
+	// {
+	// 	glDeleteProgram(tcshader);
+	// 	glDeleteProgram(teshader);
+	// }
 
 	return r_prog;
 }
@@ -432,6 +449,7 @@ void initPrograms(void)
 	// rlight_prog = loadProgram("vert_light.shd","frag_light.shd");
 	// final
 	rshadow_prog = loadProgram("vert_33.shd","frag_33.shd","","tessctrl_43.shd","tesseval_43.shd");
+	checkError(__LINE__);
 
 	// al_pos = glGetAttribLocation(rlight_prog,"al_pos");
 	// ul_lmvpmat = glGetUniformLocation(rlight_prog,"ul_lmvpmat");
@@ -447,6 +465,8 @@ void initPrograms(void)
 	u_light_pos = glGetUniformLocation(rshadow_prog,"u_light_pos");
 	u_cam_pos = glGetUniformLocation(rshadow_prog,"u_cam_pos");
 	u_fov = glGetUniformLocation(rshadow_prog,"u_fov");
+
+	checkError(__LINE__);
 }
 
 void initFbos(void)
@@ -486,9 +506,12 @@ void initFbos(void)
 	checkFBO(GL_FRAMEBUFFER);
 }
 
-void checkError(void)
+void checkError(int line)
 {
 	GLenum err=glGetError();
+
+	if(err != GL_NO_ERROR)
+		cout << "gl error: line " << line << endl;
 
 	switch(err)
 	{
@@ -538,8 +561,8 @@ void initGeometry(void)
 	glBindBuffer(GL_ARRAY_BUFFER,mesh.idvtx);
 	glBufferData(GL_ARRAY_BUFFER,sizeof(Vec3f)*mesh.vtxcount,mesh.vtx,GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER,mesh.idfce);
-	glBufferData(GL_ARRAY_BUFFER,sizeof(AETriangle)*mesh.fcecount,mesh.fce,GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh.idfce);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(AETriangle)*mesh.fcecount,mesh.fce,GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER,mesh.idtcr);
 	glBufferData(GL_ARRAY_BUFFER,sizeof(AETexCoord)*mesh.tcrcount,mesh.tcr,GL_STATIC_DRAW);
