@@ -273,7 +273,7 @@ void draw(SDL_Window *window)
 	glUniform3f(u_cam_pos,cam_mv[12],cam_mv[13],cam_mv[14]);
 
 	glEnableVertexAttribArray(a_pos);
-	glVertexAttribPointer(al_pos,3,GL_FLOAT,GL_FALSE,0,0);
+	glVertexAttribPointer(a_pos,3,GL_FLOAT,GL_FALSE,0,0);
 
 	glBindBuffer(GL_ARRAY_BUFFER,mesh.idnrm);
 	glEnableVertexAttribArray(a_normal);
