@@ -61,6 +61,8 @@ float fov_val = 60;
 Vec3f cpos = vec3f(0,5,0);
 Vec3f cang = vec3f(0,90,0);
 
+GLuint vao;
+
 
 void draw(SDL_Window *window);
 void init(void);
@@ -246,7 +248,7 @@ void deinit(void)
 
 	glDeleteFramebuffers(1,&light_fbo);
 
-	glDeleteProgram(rlight_prog);
+	// glDeleteProgram(rlight_prog);
 	glDeleteProgram(rshadow_prog);
 
 	glDeleteBuffers(1,&mesh.idvtx);
@@ -312,27 +314,12 @@ void draw(SDL_Window *window)
 	glUniform3f(u_cam_pos,cam_mv[12],cam_mv[13],cam_mv[14]);
 
 	glUniform1f(u_fov,fov_val);
-
-	glBindBuffer(GL_ARRAY_BUFFER,mesh.idvtx);
-	glVertexAttribPointer(a_pos,3,GL_FLOAT,GL_FALSE,0,0);
-
-	glBindBuffer(GL_ARRAY_BUFFER,mesh.idnrm);
-	glVertexAttribPointer(a_normal,3,GL_FLOAT,GL_FALSE,0,0);
-
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh.idfce);
-
 	checkError(__LINE__);
-	glEnableVertexAttribArray(a_pos);
-	glEnableVertexAttribArray(a_normal);
+
+	glBindVertexArray(vao);
 	checkError(__LINE__);
 
 	glDrawElements(GL_PATCHES,3*mesh.fcecount,GL_UNSIGNED_INT,0);
-	checkError(__LINE__);
-
-	glDisableVertexAttribArray(a_pos);
-	glDisableVertexAttribArray(a_normal);
 	checkError(__LINE__);
 
 	SDL_GL_SwapWindow(window);
@@ -508,27 +495,34 @@ void initFbos(void)
 
 void checkError(int line)
 {
-	GLenum err=glGetError();
-
-	if(err != GL_NO_ERROR)
-		cout << "gl error: line " << line << endl;
-
-	switch(err)
+	try
 	{
-	case GL_NO_ERROR:
-		return;
-	case GL_INVALID_ENUM:
-		throw runtime_error("err: invalid enumeration;");
-		break;
-	case GL_INVALID_VALUE:
-		throw runtime_error("err: invalid value;");
-		break;
-	case GL_INVALID_OPERATION:
-		throw runtime_error("err: invalid operation;");
-		break;
-	case GL_OUT_OF_MEMORY:
-		throw runtime_error("err: out of memory;");
-		break;
+		GLenum err=glGetError();
+
+		if(err != GL_NO_ERROR)
+			cout << "gl error: line " << line << endl;
+
+		switch(err)
+		{
+		case GL_NO_ERROR:
+			return;
+		case GL_INVALID_ENUM:
+			throw runtime_error("err: invalid enumeration;");
+			break;
+		case GL_INVALID_VALUE:
+			throw runtime_error("err: invalid value;");
+			break;
+		case GL_INVALID_OPERATION:
+			throw runtime_error("err: invalid operation;");
+			break;
+		case GL_OUT_OF_MEMORY:
+			throw runtime_error("err: out of memory;");
+			break;
+		}
+	}
+	catch(const exception &re)
+	{
+		cout << "opengl error exception caught: " << re.what() << endl;
 	}
 }
 
@@ -553,6 +547,9 @@ void initGeometry(void)
 {
 	LoadObjFile(mesh,"test2.obj");
 
+	glGenVertexArrays(1,&vao);
+	glBindVertexArray(vao);
+
 	glGenBuffers(1,&mesh.idvtx);
 	glGenBuffers(1,&mesh.idfce);
 	glGenBuffers(1,&mesh.idtcr);
@@ -570,5 +567,20 @@ void initGeometry(void)
 	glBindBuffer(GL_ARRAY_BUFFER,mesh.idnrm);
 	glBufferData(GL_ARRAY_BUFFER,sizeof(Vec3f)*mesh.nrmcount,mesh.nrm,GL_STATIC_DRAW);
 
+	glUseProgram(rshadow_prog);
+
+	glBindBuffer(GL_ARRAY_BUFFER,mesh.idvtx);
+	glVertexAttribPointer(a_pos,3,GL_FLOAT,GL_FALSE,0,0);
+
+	glBindBuffer(GL_ARRAY_BUFFER,mesh.idnrm);
+	glVertexAttribPointer(a_normal,3,GL_FLOAT,GL_FALSE,0,0);
+
+	glEnableVertexAttribArray(a_pos);
+	glEnableVertexAttribArray(a_normal);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh.idfce);
+
+	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER,0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
 }
