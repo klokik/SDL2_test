@@ -1,9 +1,10 @@
 #version 400 core
+#extension GL_ARB_tessellation_shader : enable
 
 layout (vertices = 3) out;
 
 in vec4 pos[];
-in vec3 nrm[];
+flat in vec3 nrm[];
 
 out vec4 _pos[];
 out vec3 _nrm[];
