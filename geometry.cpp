@@ -305,14 +305,16 @@ void draw(SDL_Window *window)
 	checkError(__LINE__);
 
 	glUseProgram(rshadow_prog);
+	checkError(__LINE__);
 
 	// mv_prj = cam_prj*cam_mv;
 	glUniformMatrix4fv(u_modelview,1,GL_FALSE,cam_mv.ToArray());
 	glUniformMatrix4fv(u_projection,1,GL_FALSE,cam_prj.ToArray());
-
+	checkError(__LINE__);
 	glUniform3f(u_light_pos,light_mv[12],light_mv[13],light_mv[14]);
 	glUniform3f(u_cam_pos,cam_mv[12],cam_mv[13],cam_mv[14]);
 
+	checkError(__LINE__);
 	glUniform1f(u_fov,fov_val);
 	checkError(__LINE__);
 
@@ -335,6 +337,23 @@ bool checkCompileStatus(uint shaderid)
 		char log[2048];
 		int len;
 		glGetShaderInfoLog(shaderid,2048,&len,log);
+		cout<<log<<endl;
+		return false;
+	}
+
+	return true;
+}
+
+bool checkLinkStatus(uint programid)
+{
+	int result = 0;
+	glGetProgramiv(programid, GL_LINK_STATUS, &result);
+	if(result!=GL_TRUE)
+	{
+		cout<<"program FAIL"<<endl;
+		char log[2048];
+		int len;
+		glGetProgramInfoLog(programid,2048,&len,log);
 		cout<<log<<endl;
 		return false;
 	}
@@ -415,6 +434,8 @@ uint loadProgram(string vfile,string ffile,string gfile,string tcfile,string tef
 	}
 
 	glLinkProgram(r_prog);
+	if(!checkLinkStatus(r_prog))
+		throw runtime_error("Failed to link program");
 
 	// glDeleteShader(vshader);
 	// glDeleteShader(fshader);
