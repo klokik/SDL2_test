@@ -18,7 +18,9 @@ using namespace std;
 using namespace aengine;
 
 
-int depth_tex_size = 256;
+int render_tex_size = 512;
+int scaler = 2;
+
 GLuint light_depth_tex;
 GLuint light_fbo;
 // GLuint light_color_tex[6];
@@ -136,7 +138,7 @@ int main(int argc, char **argv)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-	mainwindow = SDL_CreateWindow("SDL2 application",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,depth_tex_size*4,depth_tex_size*3,SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
+	mainwindow = SDL_CreateWindow("SDL2 application",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,render_tex_size*4/scaler,render_tex_size*3/scaler,SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
 	if(!mainwindow)
 		die("Unable to create window!");
 
@@ -338,7 +340,7 @@ void draw(SDL_Window *window)
 		GLenum draw_buf[]={GL_COLOR_ATTACHMENT0+q};
 		glDrawBuffers(1,draw_buf);
 
-		glViewport(0,0,depth_tex_size,depth_tex_size);
+		glViewport(0,0,render_tex_size,render_tex_size);
 		glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 		glUniformMatrix4fv(u_modelview,1,GL_FALSE,proj[q].ToArray());
 
@@ -374,13 +376,13 @@ void draw(SDL_Window *window)
 	// blit
 	GLenum copy_buf[] = {GL_BACK_LEFT};
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-	glViewport(0,0,depth_tex_size*4,depth_tex_size*3);
+	glViewport(0,0,render_tex_size*4/scaler,render_tex_size*3/scaler);
 	glDrawBuffers(1,copy_buf);
 	glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER,light_fbo);
 
-	float dts = depth_tex_size;
+	float dts = render_tex_size/scaler;
 
 	Vec2f poss[] = {
 		vec2f(dts*2,dts),
@@ -395,14 +397,14 @@ void draw(SDL_Window *window)
 	for(uint q=0;q<6;q++)
 	{
 		glReadBuffer(GL_COLOR_ATTACHMENT0+q);
-		glBlitFramebuffer(0,0,depth_tex_size,depth_tex_size,
+		glBlitFramebuffer(0,0,render_tex_size,render_tex_size,
 			poss[q].X,poss[q].Y,
 			poss[q].X+dts,poss[q].Y+dts,GL_COLOR_BUFFER_BIT,GL_NEAREST);
 	}
 	int q=6;
 	dts *= fov_val/90;
 	glReadBuffer(GL_COLOR_ATTACHMENT0+q);
-		glBlitFramebuffer(0,0,depth_tex_size,depth_tex_size,
+		glBlitFramebuffer(0,0,render_tex_size,render_tex_size,
 			poss[q].X,poss[q].Y,
 			poss[q].X+dts,poss[q].Y+dts,GL_COLOR_BUFFER_BIT,GL_NEAREST);
 
@@ -547,7 +549,7 @@ GLuint createColorTex()
 	GLuint tex;
 	glGenTextures(1,&tex);
 	glBindTexture(GL_TEXTURE_2D,tex);
-	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,depth_tex_size,depth_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,render_tex_size,render_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
@@ -560,7 +562,7 @@ void initFbos(void)
 	// depth texture
 	glGenTextures(1,&light_depth_tex);
 	glBindTexture(GL_TEXTURE_2D,light_depth_tex);
-	glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH24_STENCIL8/*GL_DEPTH_COMPONENT32*/,depth_tex_size,depth_tex_size,0,GL_DEPTH_COMPONENT,GL_FLOAT,NULL);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH24_STENCIL8/*GL_DEPTH_COMPONENT32*/,render_tex_size,render_tex_size,0,GL_DEPTH_COMPONENT,GL_FLOAT,NULL);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -577,7 +579,7 @@ void initFbos(void)
 	checkError();
 	for(uint q=0;q<6;q++)
 	{
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,0,GL_RGBA8,depth_tex_size,depth_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,0,GL_RGBA8,render_tex_size,render_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
 		checkError();
 	}
 	glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
