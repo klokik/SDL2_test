@@ -28,6 +28,8 @@ GLuint cube_tex;
 //GLuint square[4];
 AEMesh mesh;
 
+GLuint quad_buf;
+
 GLint al_pos;
 GLint ul_lmvpmat;
 
@@ -43,9 +45,13 @@ GLint u_light_pos;
 GLint u_cam_pos;
 GLint u_fov;
 
+GLint af_pos;
+GLint uf_tex;
+
 
 GLuint rlight_prog;
 GLuint rshadow_prog;
+GLuint fisheye_prog;
 
 AEMatrix4f4 cam_mv;
 AEMatrix4f4 cam_prj;
@@ -221,8 +227,11 @@ void init(void)
 	// glEnable(GL_TEXTURE_2D);
 
 	initPrograms();
+	checkError();
 	initFbos();
+	checkError();
 	initGeometry();
+	checkError();
 }
 
 void deinit(void)
@@ -240,6 +249,8 @@ void deinit(void)
 	glDeleteBuffers(1,&mesh.idtcr);
 	glDeleteBuffers(1,&mesh.idfce);
 	glDeleteBuffers(1,&mesh.idnrm);
+
+	glDeleteBuffers(1,&quad_buf);
 }
 
 void setView(void)
@@ -280,6 +291,7 @@ AEMatrix4f4 getProjMtx(float fov,float z_near,float z_far)
 void draw(SDL_Window *window)
 {
 	setView();
+	checkError();
 
 	// GLenum copy_buf[] = {GL_BACK_LEFT};
 	// glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
@@ -315,10 +327,10 @@ void draw(SDL_Window *window)
 	{
 		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(-90).RotateX(0).Invert(),
 		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(90).RotateX(0).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(90).Invert(),
 		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(-90).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(180).RotateX(0).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0).Invert()
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(90).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(180).RotateX(0).Invert()
 	};
 
 	for(uint q=0;q<6;q++)
@@ -336,6 +348,28 @@ void draw(SDL_Window *window)
 	glDisableVertexAttribArray(a_pos);
 	glDisableVertexAttribArray(a_normal);
 
+	// projection
+	GLenum draw_buf[]={GL_COLOR_ATTACHMENT0+6};
+	glDrawBuffers(1,draw_buf);
+	glUseProgram(fisheye_prog);
+
+	checkError();
+	glEnable(GL_TEXTURE_CUBE_MAP);
+	glActiveTexture(GL_TEXTURE0);
+	checkError();
+	glBindTexture(GL_TEXTURE_CUBE_MAP,cube_tex);
+	checkError();
+	glUniform1i(uf_tex,0);
+	checkError();
+
+	glBindBuffer(GL_ARRAY_BUFFER,quad_buf);
+	glVertexAttribPointer(af_pos,3,GL_FLOAT,GL_FALSE,0,0);
+	checkError();
+
+	glEnableVertexAttribArray(af_pos);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	glDisableVertexAttribArray(af_pos);
+	checkError();
 
 	// blit
 	GLenum copy_buf[] = {GL_BACK_LEFT};
@@ -351,10 +385,10 @@ void draw(SDL_Window *window)
 	Vec2f poss[] = {
 		vec2f(dts*2,dts),
 		vec2f(0,dts),
-		vec2f(dts,dts*2),
 		vec2f(dts,0),
-		vec2f(dts*3,dts),
+		vec2f(dts,dts*2),
 		vec2f(dts,dts),
+		vec2f(dts*3,dts),
 		vec2f(0,0)
 	};
 
@@ -481,6 +515,7 @@ void initPrograms(void)
 	// rlight_prog = loadProgram("vert_light.shd","frag_light.shd");
 	// final
 	rshadow_prog = loadProgram("vert_cube.shd","frag_cube.shd","","","");
+	fisheye_prog = loadProgram("vert_proj.shd","frag_proj.shd","","","");
 
 	// al_pos = glGetAttribLocation(rlight_prog,"al_pos");
 	// ul_lmvpmat = glGetUniformLocation(rlight_prog,"ul_lmvpmat");
@@ -496,6 +531,9 @@ void initPrograms(void)
 	u_light_pos = glGetUniformLocation(rshadow_prog,"u_light_pos");
 	u_cam_pos = glGetUniformLocation(rshadow_prog,"u_cam_pos");
 	u_fov = glGetUniformLocation(rshadow_prog,"u_fov");
+
+	af_pos = glGetAttribLocation(fisheye_prog,"af_pos");
+	uf_tex = glGetUniformLocation(fisheye_prog,"uf_tex");
 }
 
 GLuint createColorTex()
@@ -526,19 +564,22 @@ void initFbos(void)
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 
 	fisheye_tex = createColorTex();
+	checkError();
 
 	glGenTextures(1,&cube_tex);
 	glBindTexture(GL_TEXTURE_CUBE_MAP,cube_tex);
+	checkError();
 	for(uint q=0;q<6;q++)
 	{
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,0,GL_RGBA8,depth_tex_size,depth_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+		checkError();
 	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	checkError();
 
 	glBindTexture(GL_TEXTURE_2D,0);
+	checkError();
 
 	// depth framebuffer
 	glGenFramebuffers(1,&light_fbo);
@@ -547,6 +588,7 @@ void initFbos(void)
 	for(uint q=0;q<6;q++)
 		glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0+q,GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,cube_tex,0);
 
+	checkError();
 	glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0+6,GL_TEXTURE_2D,fisheye_tex,0);
 	// GLenum draw_buf[]={GL_COLOR_ATTACHMENT0};
 	// glDrawBuffers(1,draw_buf);
@@ -615,6 +657,17 @@ void initGeometry(void)
 
 	glBindBuffer(GL_ARRAY_BUFFER,mesh.idnrm);
 	glBufferData(GL_ARRAY_BUFFER,sizeof(Vec3f)*mesh.nrmcount,mesh.nrm,GL_STATIC_DRAW);
+
+	Vec3f quad_data[] = {
+		vec3f(-1.0,-1.0,0.5),
+		vec3f(-1.0, 1.0,0.5),
+		vec3f( 1.0,-1.0,0.5),
+		vec3f( 1.0, 1.0,0.5)
+	};
+
+	glGenBuffers(1,&quad_buf);
+	glBindBuffer(GL_ARRAY_BUFFER,quad_buf);
+	glBufferData(GL_ARRAY_BUFFER,sizeof(quad_data),quad_data,GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER,0);
 }

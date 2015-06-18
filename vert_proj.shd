@@ -1,0 +1,13 @@
+#version 120
+
+//uniform samplerCube uf_tex;
+
+attribute vec3 af_pos;
+
+varying vec2 frag_pos;
+
+void main()
+{
+	frag_pos = af_pos.xy;
+	gl_Position = vec4(af_pos,1.0);
+}

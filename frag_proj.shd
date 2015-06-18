@@ -1,0 +1,10 @@
+#version 120
+
+uniform samplerCube uf_tex;
+
+varying vec2 frag_pos;
+
+void main()
+{
+	gl_FragColor = textureCube(uf_tex,normalize(vec3(frag_pos*vec2(1,-1),0.5)));
+}
