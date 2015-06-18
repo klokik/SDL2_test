@@ -21,7 +21,9 @@ using namespace aengine;
 int depth_tex_size = 256;
 GLuint light_depth_tex;
 GLuint light_fbo;
-GLuint light_color_tex[6];
+// GLuint light_color_tex[6];
+GLuint fisheye_tex;
+GLuint cube_tex;
 
 //GLuint square[4];
 AEMesh mesh;
@@ -226,7 +228,8 @@ void init(void)
 void deinit(void)
 {
 	glDeleteTextures(1,&light_depth_tex);
-	glDeleteTextures(6,&light_color_tex[0]);
+	glDeleteTextures(1,&fisheye_tex);
+	glDeleteTextures(1,&cube_tex);
 
 	glDeleteFramebuffers(1,&light_fbo);
 
@@ -310,12 +313,12 @@ void draw(SDL_Window *window)
 
 	AEMatrix4f4 proj[] = 
 	{
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0-90).RotateX(0).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0+90).RotateX(0).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0+180).RotateX(0).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0-90).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0+90).Invert()
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(-90).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(90).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(90).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(-90).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(180).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0).Invert()
 	};
 
 	for(uint q=0;q<6;q++)
@@ -346,15 +349,16 @@ void draw(SDL_Window *window)
 	float dts = depth_tex_size;
 
 	Vec2f poss[] = {
-		vec2f(dts,dts),
 		vec2f(dts*2,dts),
 		vec2f(0,dts),
-		vec2f(dts*3,dts),
+		vec2f(dts,dts*2),
 		vec2f(dts,0),
-		vec2f(dts,dts*2)
+		vec2f(dts*3,dts),
+		vec2f(dts,dts),
+		vec2f(0,0)
 	};
 
-	for(uint q=0;q<6;q++)
+	for(uint q=0;q<7;q++)
 	{
 		glReadBuffer(GL_COLOR_ATTACHMENT0+q);
 		glBlitFramebuffer(0,0,depth_tex_size,depth_tex_size,
@@ -521,9 +525,18 @@ void initFbos(void)
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 
-	// color textures
+	fisheye_tex = createColorTex();
+
+	glGenTextures(1,&cube_tex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP,cube_tex);
 	for(uint q=0;q<6;q++)
-		light_color_tex[q] = createColorTex();
+	{
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,0,GL_RGBA8,depth_tex_size,depth_tex_size,0,GL_RGBA,GL_FLOAT,NULL);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+	}
 
 	glBindTexture(GL_TEXTURE_2D,0);
 
@@ -532,7 +545,9 @@ void initFbos(void)
 	glBindFramebuffer(GL_FRAMEBUFFER,light_fbo);
 	glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_TEXTURE_2D,light_depth_tex,0);
 	for(uint q=0;q<6;q++)
-		glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0+q,GL_TEXTURE_2D,light_color_tex[q],0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0+q,GL_TEXTURE_CUBE_MAP_POSITIVE_X+q,cube_tex,0);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0+6,GL_TEXTURE_2D,fisheye_tex,0);
 	// GLenum draw_buf[]={GL_COLOR_ATTACHMENT0};
 	// glDrawBuffers(1,draw_buf);
 	//glDrawBuffer(GL_NONE);
