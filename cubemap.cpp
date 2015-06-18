@@ -54,10 +54,10 @@ AEMatrix4f4 light_prj;
 AEMatrix4f4 shadow_matrix;
 
 float t = 0;
-float fov_val = 60;
+float fov_val = 90;
 
 Vec3f cpos = vec3f(0,5,0);
-Vec3f cang = vec3f(0,0,0);
+Vec3f cang = vec3f(0,90,0);
 
 
 void draw(SDL_Window *window);
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-	mainwindow = SDL_CreateWindow("SDL2 application",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,depth_tex_size*3,depth_tex_size*2,SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
+	mainwindow = SDL_CreateWindow("SDL2 application",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,depth_tex_size*4,depth_tex_size*3,SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN);
 	if(!mainwindow)
 		die("Unable to create window!");
 
@@ -213,7 +213,7 @@ void init(void)
 	// glDepthFunc(GL_LEQUAL);
 	// glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);	
 
-	cam_prj = getProjMtx(45.0f,0.1,100.0f);
+	cam_prj = getProjMtx(fov_val,0.1,100.0f);
 	light_prj = getProjMtx(90.0f,0.1,100.0f);
 
 	// glEnable(GL_TEXTURE_2D);
@@ -310,12 +310,12 @@ void draw(SDL_Window *window)
 
 	AEMatrix4f4 proj[] = 
 	{
-		AEMatrix4f4().Translate(cpos).RotateY(cang.Y).RotateX(cang.X).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateY(cang.Y+90).RotateX(cang.X).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateY(cang.Y-90).RotateX(cang.X).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateY(cang.Y+180).RotateX(cang.X).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateY(cang.Y).RotateX(cang.X+90).Invert(),
-		AEMatrix4f4().Translate(cpos).RotateY(cang.Y).RotateX(cang.X-90).Invert()
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0-90).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0+90).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0+180).RotateX(0).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0-90).Invert(),
+		AEMatrix4f4().Translate(cpos).RotateZ(cang.X).RotateY(cang.Y).RotateY(0).RotateX(0+90).Invert()
 	};
 
 	for(uint q=0;q<6;q++)
@@ -343,12 +343,23 @@ void draw(SDL_Window *window)
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER,light_fbo);
 
+	float dts = depth_tex_size;
+
+	Vec2f poss[] = {
+		vec2f(dts,dts),
+		vec2f(dts*2,dts),
+		vec2f(0,dts),
+		vec2f(dts*3,dts),
+		vec2f(dts,0),
+		vec2f(dts,dts*2)
+	};
+
 	for(uint q=0;q<6;q++)
 	{
 		glReadBuffer(GL_COLOR_ATTACHMENT0+q);
 		glBlitFramebuffer(0,0,depth_tex_size,depth_tex_size,
-			depth_tex_size*(q%3),depth_tex_size*(q/3),
-			depth_tex_size*(q%3+1),depth_tex_size*(q/3+1),GL_COLOR_BUFFER_BIT,GL_NEAREST);
+			poss[q].X,poss[q].Y,
+			poss[q].X+dts,poss[q].Y+dts,GL_COLOR_BUFFER_BIT,GL_NEAREST);
 	}
 
 	SDL_GL_SwapWindow(window);
