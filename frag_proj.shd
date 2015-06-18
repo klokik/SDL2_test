@@ -6,5 +6,12 @@ varying vec2 frag_pos;
 
 void main()
 {
-	gl_FragColor = textureCube(uf_tex,normalize(vec3(frag_pos*vec2(1,-1),0.5)));
+	float r = length(frag_pos);
+	float f = 1;
+
+	float theta = 3*atan(2*r,sqrt(r*r+1));
+
+	vec3 tc = vec3(sin(theta)*frag_pos.x/r,sin(theta)*frag_pos.y/r,cos(theta));
+
+	gl_FragColor = textureCube(uf_tex,tc);
 }

@@ -177,8 +177,8 @@ int main(int argc, char **argv)
 		if(state[SDL_SCANCODE_SPACE])	cpos.Y += 0.1f;
 		if(state[SDL_SCANCODE_LSHIFT])	cpos.Y -= 0.1f;
 
-		if(state[SDL_SCANCODE_O])	fov_val -= 0.5f;
-		if(state[SDL_SCANCODE_P])	fov_val += 0.5f;
+		if(state[SDL_SCANCODE_O])	fov_val -= 1.0f;
+		if(state[SDL_SCANCODE_P])	fov_val += 1.0f;
 
 
 		if(false)
@@ -374,7 +374,7 @@ void draw(SDL_Window *window)
 	// blit
 	GLenum copy_buf[] = {GL_BACK_LEFT};
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-	glViewport(0,0,depth_tex_size*3,depth_tex_size*2);
+	glViewport(0,0,depth_tex_size*4,depth_tex_size*3);
 	glDrawBuffers(1,copy_buf);
 	glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 
@@ -392,13 +392,19 @@ void draw(SDL_Window *window)
 		vec2f(0,0)
 	};
 
-	for(uint q=0;q<7;q++)
+	for(uint q=0;q<6;q++)
 	{
 		glReadBuffer(GL_COLOR_ATTACHMENT0+q);
 		glBlitFramebuffer(0,0,depth_tex_size,depth_tex_size,
 			poss[q].X,poss[q].Y,
 			poss[q].X+dts,poss[q].Y+dts,GL_COLOR_BUFFER_BIT,GL_NEAREST);
 	}
+	int q=6;
+	dts *= fov_val/90;
+	glReadBuffer(GL_COLOR_ATTACHMENT0+q);
+		glBlitFramebuffer(0,0,depth_tex_size,depth_tex_size,
+			poss[q].X,poss[q].Y,
+			poss[q].X+dts,poss[q].Y+dts,GL_COLOR_BUFFER_BIT,GL_NEAREST);
 
 	SDL_GL_SwapWindow(window);
 }
